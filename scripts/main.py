@@ -5,6 +5,12 @@ import shutil
 import datetime
 import torch
 
+import importlib.util
+if sys.version_info < (3, 8):
+    import importlib_metadata
+else:
+    import importlib.metadata as importlib_metadata
+
 import gradio as gr
 
 from launch import run
@@ -48,50 +54,19 @@ def print_about_basic():
     except:
         pass
 
-    try:
-        import diffusers
-        rs.append(f"diffusers: {diffusers.__version__}")
-    except:
-        rs.append('diffusers: unknown')
-
-    try:
-        rs.append(f"torch: {torch.__version__}")
-    except:
-        rs.append('torch: unknown')
-
-    try:
-        import torchvision
-        rs.append(f"torchvision: {torchvision.__version__}")
-    except:
-        rs.append('torchvision: unknown')
-
-    try:
-        import transformers
-        rs.append(f"transformers: {transformers.__version__}")
-    except:
-        rs.append('transformers: unknown')
-
-    try:
-        # Dreambooth流
-        from diffusers.utils.import_utils import is_xformers_available
-        if is_xformers_available():
-            import xformers
-            import xformers.ops
-            rs.append(f"xformers: {transformers.__version__}")
-        else:
-            rs.append('xformers: none')
-    except:
+    checks = ["bitsandbytes", "diffusers", "transformers", "xformers", "torch", "torchvision"]
+    for check in checks:
+        check_ver = "N/A"
         try:
-            # だめならpipで見る
-            python = sys.executable
-            xformers = run(f"{python} -m pip show xformers")
-            for line in xformers.split("\n"):
-                values = line.split(':')
-                if values[0] == 'Version' and values[1]:
-                    rs.append(f"xformers: {values[1]}")
-                    break
-        except:
-            rs.append('xformers: unknown')
+            check_available = importlib.util.find_spec(check) is not None
+            if check_available:
+                check_ver = importlib_metadata.version(check)
+        except importlib_metadata.PackageNotFoundError:
+            check_available = False
+        if check_available:
+            rs.append(f"{check}: {check_ver}")
+        else:
+            rs.append(f"{check}: NOT installed.")
 
     return "\n".join(rs)
 
